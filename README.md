@@ -4,8 +4,6 @@
 
 **English** | [Português](#português)
 
-![PepperDex sprite preview](docs/images/pokemon-sprite-preview.png)
-
 > **Unofficial fan project.** PepperDex is a community-made tool inspired by Pokémon Tabletop United. It is not affiliated with, endorsed by, or associated with Nintendo, Game Freak, The Pokémon Company, or the creators of PTU. Pokémon names and imagery belong to their respective owners.
 
 ## Features
