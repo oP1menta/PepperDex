@@ -1,12 +1,18 @@
 # PTU - Mesa do Mestre
 
+> **Projeto de fã, sem fins lucrativos.** Não é afiliado à Nintendo, Game Freak, Creatures nem The Pokémon Company.
+> Pokémon e todos os nomes, imagens e sons relacionados pertencem aos seus donos. Os sprites e cries vêm de fontes
+> públicas de fãs (como o PokeAPI) e estão aqui apenas para uso pessoal em mesas de RPG. Se você é titular de direitos
+> e quer algo removido, abra uma issue.
+
+
 App web de apoio ao RPG **Pokémon Tabletop United**: o Mestre roda o programa no próprio computador e os jogadores
 entram pelo navegador (celular ou PC), **de qualquer lugar**. Pokédex, party e PC, captura com dado, áreas de spawn,
 evolução, XP, ferramentas do Mestre. Português e inglês.
 
 ## Para o Mestre: baixar e jogar
 
-1. Abra a aba **Releases** deste repositório (precisa estar logado no GitHub e ter sido convidado).
+1. Abra a aba **Releases** deste repositório.
 2. Baixe `PTU-Mestre-Windows.zip` (Windows) ou `PTU-Mestre-Linux.tar.gz` (Linux) e extraia.
 3. **Windows:** dois cliques em `Iniciar.bat`. **Linux:** `./iniciar.sh`.
 4. A página do Mestre abre sozinha. Na aba **Sessões** aparece o convite (link + código + QR): clique em
@@ -40,17 +46,9 @@ Na aba Sessões, o botão **Conectar pela internet** liga o túnel (em desenvolv
 
 Gerar o pacote do seu sistema localmente (precisa de JDK 21+): `bash packaging/build.sh` → `dist/PTU-Mestre/`.
 
-### Publicar este repositório (privado) e uma versão
+### Publicar uma versão
 
-```bash
-git init -b main
-git add .
-git commit -m "PTU Mesa do Mestre"
-git remote add origin git@github.com:SEU-USUARIO/NOME-DO-REPOSITORIO.git   # repositório criado como Private
-git push -u origin main
-```
-
-Convide os Mestres em *Settings → Collaborators*. Para lançar uma versão (gera os dois pacotes em Releases):
+Para lançar uma versão (gera os dois pacotes em Releases):
 
 ```bash
 git tag v1.0.0
