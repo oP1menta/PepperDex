@@ -1163,12 +1163,53 @@ async function loadTrainers(method = 'GET', extra = {}, path = '/api/trainers') 
   fillSheetSelect();
   pcSetData(list);
   trainerList.innerHTML = list.length
-    ? list.map(tr => '<div class="wild">#' + tr.id + ' <b>' + esc(tr.name) + '</b> <button onclick="deleteTrainer(' + tr.id + ')">' + t('del') + '</button>' +
+    ? list.map(tr => '<div class="wild">#' + tr.id + ' <b>' + esc(tr.name) + '</b> <button onclick="deleteTrainer(' + tr.id + ')">' + t('del') + '</button>' + profileHtml(tr, false) +
         (tr.team.length
           ? '<div class="team">' + tr.team.map(p => sprite(keyOf(p), 'small', p.shiny)).join('') + '</div><small>' +
             tr.team.map(p => esc(displayName(p)) + ' ' + t('lv') + p.level).join(' &middot; ') + '</small>'
           : '<br><small>' + t('noPoke') + '</small>') + '</div>').join('')
     : t('noChars');
+}
+
+
+//=========TRAINER SHEET (level, XP, HP, the six stats)=========
+const bar = (pct, cls) => '<div class="bar ' + cls + '"><i style="width:' + Math.max(0, Math.min(100, pct)) + '%"></i></div>';
+
+function profileHtml(tr, master) {
+  const pr = tr.profile;
+  if (!pr) return '';
+  const names = t('statNames').split(',');
+  const hpPct = Math.round(100 * pr.hp / pr.maxHp);
+  let h = '<div class="prof"><div class="prow"><b>' + t('lv') + ' ' + pr.level + '</b><span class="pxp">XP ' + pr.xp + '/' + pr.xpNext + '</span>' + bar(100 * pr.xp / pr.xpNext, 'xp') + '</div>' +
+    '<div class="prow"><b>' + t('hpLbl') + ' ' + pr.hp + '/' + pr.maxHp + '</b>' + bar(hpPct, 'hp ' + (hpPct > 50 ? 'ok' : hpPct > 25 ? 'mid' : 'low')) + '</div>';
+  if (!master) {
+    h += '<div class="prow pbtns">' + [-10, -1, 1, 10].map(d => '<button onclick="profHp(' + tr.id + ',' + d + ')">' + (d > 0 ? '+' : '') + d + '</button>').join('') + '</div>';
+  }
+  h += '<div class="pstatgrid">' + pr.stats.map((v, k) => '<div class="pstat"><small>' + esc(names[k]) + '</small>' +
+    (master ? '<b>' + v + '</b>' : '<div><button onclick="profStat(' + tr.id + ',' + k + ',-1)">-</button><b>' + v + '</b><button onclick="profStat(' + tr.id + ',' + k + ',1)">+</button></div>') + '</div>').join('') + '</div>' +
+    '<small class="muted' + (pr.free < 0 ? ' warn' : '') + '">' + t('freePts', pr.free) + '</small>';
+  if (master) h += '<div class="prow"><input id="tp' + tr.id + '" type="number" placeholder="0"><button onclick="masterProf(' + tr.id + ',\'xp\')">' + t('giveXp') + '</button><button onclick="masterProf(' + tr.id + ',\'level\')">' + t('setLevel') + '</button><button onclick="masterProf(' + tr.id + ',\'hp\')">' + t('setHp') + '</button></div>';
+  return h + '</div>';
+}
+
+async function profSend(trainerId, extra) {
+  const r = await fetch('/api/profile', { method: 'POST', body: new URLSearchParams({ ...auth(), trainerId, ...extra }) });
+  if (r.ok) loadTrainers();
+}
+function profStat(id, k, d) {
+  const tr = pcData.find(x => x.id === id); if (!tr) return;
+  const st = [...tr.profile.stats]; st[k] = Math.max(1, Math.min(40, st[k] + d));
+  profSend(id, { stats: st.join(',') });
+}
+function profHp(id, d) {
+  const tr = pcData.find(x => x.id === id); if (!tr) return;
+  profSend(id, { hp: Math.max(0, Math.min(tr.profile.maxHp, tr.profile.hp + d)) });
+}
+async function masterProf(id, field) {
+  const v = document.getElementById('tp' + id).value;
+  if (v === '') return;
+  await fetch('/api/profile/master', { method: 'POST', body: new URLSearchParams({ code: spawnSession.value, trainerId: id, [field]: v }) });
+  playerHtml = ''; loadPlayers();
 }
 
 //=========PLAYER: PC (Cobblemon-style: detail left, boxes center, party right)=========
@@ -2016,7 +2057,7 @@ async function loadPlayers() {
       '<div class="pstats"><span title="' + esc(t('dexProgressTip')) + '">\uD83D\uDCD6 ' + p.dex + '</span><span>\u26AA ' + balls + '</span></div>' +
       p.trainers.map(tr => {
         const party = tr.team.filter(m => m.party > 0).sort((x, y) => x.party - y.party);
-        return '<div class="pchar"><div class="pcname"><b>' + esc(tr.name) + '</b> <small class="muted">#' + tr.id + ' &middot; ' + t('inPc', tr.team.length - party.length) + '</small></div>' +
+        return '<div class="pchar"><div class="pcname"><b>' + esc(tr.name) + '</b> <small class="muted">#' + tr.id + ' &middot; ' + t('inPc', tr.team.length - party.length) + '</small></div>' + profileHtml(tr, true) +
           '<div class="pparty">' + (party.map(m => { const pct = Math.max(0, Math.min(100, Math.round(100 * m.hp / m.maxHp)));
             return '<div class="pmon" title="' + esc(displayName(m)) + ' ' + t('lv') + m.level + ' &middot; HP ' + Math.round(m.hp) + '/' + m.maxHp + '">' + sprite(keyOf(m), 'small', m.shiny) +
               '<div class="bar hp ' + (pct > 50 ? 'ok' : pct > 25 ? 'mid' : 'low') + '"><i style="width:' + pct + '%"></i></div></div>'; }).join('') || '<small class="muted">' + t('noParty') + '</small>') + '</div>' +

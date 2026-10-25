@@ -967,3 +967,21 @@ h4.sub { margin: 14px 0 2px; font-size: .85rem; color: var(--label); text-transf
 .tblslot.sel { border-color: #f9c22e; background: #f9c22e33; }
 .tblsel { display: flex; gap: 8px; align-items: center; margin: 4px 0; min-height: 32px; }
 .tblsel input { width: 80px; margin: 0; }
+
+/* trainer sheet */
+.prof { margin: 6px 0; display: grid; gap: 4px; }
+.prow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.prow .bar { flex: 1 1 120px; min-width: 100px; }
+.prow input { width: 80px; margin: 0; }
+.prow button, .pstat button { width: auto; margin: 0; padding: 2px 10px; }
+.pstatgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pstat { background: #ffffff10; border-radius: 8px; padding: 4px; text-align: center; }
+.pstat div { display: flex; justify-content: center; align-items: center; gap: 6px; }
+.pstat b { min-width: 24px; }
+.warn { color: #ff8a8a; }
+.prof { min-width: 0; }
+.prow .bar { flex: 1 1 80px; min-width: 0; }
+.pstatgrid { grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); }
+.pstat { min-width: 0; }
+.pstat button { padding: 2px 8px; }
+.pstat div { gap: 4px; }

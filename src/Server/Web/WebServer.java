@@ -21,6 +21,7 @@ import Server.Services.AreaServices;
 import Server.Services.CaptureServices;
 import Server.Services.Pokedex;
 import Server.Services.TableServices;
+import Server.Services.TrainerProfiles;
 import Server.Services.PokemonServices;
 import Server.Services.SessionServices;
 import Server.Services.SpawnFeed;
@@ -41,6 +42,7 @@ public class WebServer {
     private CaptureServices captureServices;
     private SpawnFeed spawnFeed;
     private final Pokedex pokedex = new Pokedex();
+    private final TrainerProfiles profiles = new TrainerProfiles();
     private final TableServices table = new TableServices();
     private HelpRequests helpRequests;
     private AreaServices areaServices;
@@ -580,6 +582,35 @@ public class WebServer {
             if (sessionServices.findPlayerParticipant(session, playerId) == null) { reply(exchange, 404, "application/json", error("Player not in this session")); return; }
             pokedex.reset(playerId);
             reply(exchange, 200, "application/json", "{}");
+        });
+
+        // My character's numbers (the six stats and the current HP). Level and XP are the Master's.
+        httpServer.createContext("/api/profile", exchange -> {
+            Map<String, String> form = readForm(exchange);
+            SessionParticipant me = sessionPlayerOrNull(form);
+            if (me == null) { reply(exchange, 403, "application/json", error("removed")); return; }
+            int trainerId = intOr(form.get("trainerId"), -1);
+            boolean mine = false;
+            for (Trainer t : sessionServices.trainersOf(me.getPlayerId())) if (t.getId() == trainerId) mine = true;
+            if (!mine) { reply(exchange, 404, "application/json", error("Not your trainer")); return; }
+            applyProfile(trainerId, form);
+            reply(exchange, 200, "application/json", trainersJson(me.getPlayerId()));
+        });
+
+        // Master-only: same plus XP (+/-), level
+        httpServer.createContext("/api/profile/master", exchange -> {
+            if (!isLocal(exchange)) { reply(exchange, 403, "application/json", error("Master only")); return; }
+            Map<String, String> form = readForm(exchange);
+            GameSession session = sessionServices.findSessionByCode(form.getOrDefault("code", "").trim().toUpperCase());
+            if (session == null) { reply(exchange, 404, "application/json", error("Unknown session")); return; }
+            int trainerId = intOr(form.get("trainerId"), -1);
+            boolean found = false;
+            for (Player p : sessionServices.playersOf(session)) for (Trainer t : sessionServices.trainersOf(p.getId())) if (t.getId() == trainerId) found = true;
+            if (!found) { reply(exchange, 404, "application/json", error("Trainer not in this session")); return; }
+            if (form.containsKey("level")) profiles.setLevel(trainerId, intOr(form.get("level"), 1));
+            if (form.containsKey("xp")) profiles.addXp(trainerId, intOr(form.get("xp"), 0));
+            applyProfile(trainerId, form);
+            reply(exchange, 200, "application/json", profiles.json(trainerId));
         });
 
         // Master-only: send every wild Pokemon of the session away
@@ -1143,6 +1174,19 @@ public class WebServer {
     }
 
     // [{"id":1,"name":"Roberto"}, ...]
+    private static int intOr(String v, int def) { try { return Integer.parseInt(v.trim()); } catch (Exception e) { return def; } }
+
+    // stats = hp,atk,def,spatk,spdef,spd (comma separated); hp = current HP. Either may be missing.
+    private void applyProfile(int trainerId, Map<String, String> form) {
+        int[] stats = null;
+        if (form.get("stats") != null) {
+            String[] parts = form.get("stats").split(",");
+            if (parts.length == 6) { stats = new int[6]; for (int k = 0; k < 6; k++) stats[k] = intOr(parts[k], 10); }
+        }
+        Integer cur = form.get("hp") == null ? null : Integer.valueOf(intOr(form.get("hp"), 0));
+        if (stats != null || cur != null) profiles.set(trainerId, stats, cur);
+    }
+
     private String trainersJson(int playerId) {
         StringBuilder json = new StringBuilder("[");
         boolean first = true;
@@ -1150,7 +1194,7 @@ public class WebServer {
             if (!first) json.append(",");
             first = false;
             json.append("{\"id\":").append(t.getId()).append(",\"name\":\"").append(escape(t.getName()))
-                .append("\",\"boxes\":[");
+                .append("\",\"profile\":").append(profiles.json(t.getId())).append(",\"boxes\":[");
             boolean firstBox = true;
             for (Server.PC.PCBox box : pokemonServices.boxesOf(t.getId())) {
                 if (!firstBox) json.append(",");
@@ -1303,6 +1347,8 @@ public class WebServer {
         // sprites and cries never change: let the browser keep them for a day
         if (path.startsWith("/assets/") && !path.endsWith(".json")) {
             exchange.getResponseHeaders().set("Cache-Control", "max-age=86400");
+        } else {
+            exchange.getResponseHeaders().set("Cache-Control", "no-cache");   // pages and scripts: always the newest after an update
         }
         replyBytes(exchange, 200, type, Files.readAllBytes(file));
     }

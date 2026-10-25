@@ -62,7 +62,8 @@ function tableBind() {
   const up = e => {
     if (!TBL.hand.down) return;
     move(e); TBL.hand.down = false;
-    const chest = TBL.hand.y > TBL_CHEST_Y && !tblIsMaster();
+    let chest = TBL.hand.y > TBL_CHEST_Y && !tblIsMaster();
+    if (chest && !tblTrainerId()) { tblMsg(t('tblNoChar')); chest = false; }   // no character in this session = no bag
     tblSendHand(true, chest);
     if (!chest && e.pointerType === 'touch') TBL.hand.inside = false;
   };
@@ -115,7 +116,7 @@ function tblRenderChest() {
   const key = JSON.stringify([tblTrainer, tr && tr.items.map(i => [i.id, i.qty])]);
   if (key === TBL.chestKey && box.innerHTML) return;      // nothing changed: do not rebuild under the finger
   TBL.chestKey = key;
-  box.innerHTML = '<div class="tblgrid">' + tblSlots(tr ? tr.items : []) + '</div><div class="tblchest-h"><b>' + t('tblChest') + '</b>' +
+  box.innerHTML = '<div class="tblgrid">' + tblSlots(tr ? tr.items : []) + '</div>' + (tr ? '' : '<p class="warn">' + t('tblNoChar') + '</p>') + '<div class="tblchest-h"><b>' + t('tblChest') + '</b>' +
     (pcData.length > 1 ? '<select onchange="tblTrainer = +this.value; tblRenderChest()">' + pcData.map(x => '<option value="' + x.id + '"' + (x.id === tblTrainer ? ' selected' : '') + '>' + esc(x.name) + '</option>').join('') + '</select>' : (tr ? ' <small>' + esc(tr.name) + '</small>' : '')) +
     '</div><p class="muted tblhint">' + t('tblChestHint') + '</p>';
 }
