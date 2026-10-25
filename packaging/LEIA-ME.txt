@@ -1,0 +1,19 @@
+PTU - Mesa do Mestre
+====================
+
+COMO USAR (Mestre)
+1. Extraia esta pasta em qualquer lugar.
+2. Windows: de dois cliques em  Iniciar.bat     Linux: execute  ./iniciar.sh
+3. A pagina do Mestre abre no navegador. Na aba "Sessoes" aparece o convite:
+   link da internet + codigo da sessao + QR. Clique em "Copiar convite" e mande
+   para os jogadores (WhatsApp, etc.). Eles abrem o link em qualquer rede.
+4. Para encerrar, feche a janela preta.
+
+OBSERVACOES
+- Na primeira vez o programa baixa uma ferramenta gratuita da Cloudflare (o "tunel").
+  Precisa de internet. Se o Windows perguntar sobre o firewall, pode permitir.
+- O link muda toda vez que voce abre o programa: mande o convite de novo a cada sessao.
+- Seus dados ficam no arquivo pokemon.db, nesta pasta. Ao atualizar para uma versao nova,
+  copie o pokemon.db da pasta antiga para a nova para nao perder as campanhas.
+- So o navegador deste computador (a pagina do Mestre) tem poderes de Mestre:
+  quem entra pelo link da internet entra sempre como jogador.

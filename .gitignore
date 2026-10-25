@@ -1,0 +1,24 @@
+# built / local
+bin/
+build/
+dist/
+*.class
+# the Master's saved campaigns and the downloaded tunnel tool
+pokemon.db
+pokemon.db-journal
+tools/
+*.part
+# Eclipse
+.settings/
+.project
+.classpath
+spawnfeed.dat
+helprequests.dat
+pokedex.dat
+# runtime / editor leftovers
+*.dat
+*.log
+*.db-journal
+.DS_Store
+.idea/
+.vscode/

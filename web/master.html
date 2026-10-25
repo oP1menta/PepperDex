@@ -1,0 +1,217 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PTU - Master</title>
+  <link rel="stylesheet" href="/style.css">
+  <script>try { var m = localStorage.getItem('ptu.mode') || 'default'; if (m === 'auto') m = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default'; document.documentElement.dataset.mode = m; } catch (e) {}</script>
+</head>
+<body class="master">
+<div class="device">
+  <header id="topbar">
+    <div class="tl"><span class="leds"><i></i><i></i><i></i></span></div>
+    <div class="tc"><button id="ball" class="ball" onclick="openNotif()" aria-label="Notifications" disabled></button><b id="ballCount"></b></div>
+    <div class="tr"><span id="ballText"></span><span class="title">MASTER</span>
+      <details class="settings"><summary data-i="settings">Settings</summary>
+        <div class="panel">
+          <section class="set" id="appearance"></section>
+          <section class="set">
+            <h4 data-i="menu">Menu</h4>
+            <label><span data-i="menuPlace">Position</span> <select id="tabPos" onchange="setTabPos(this.value)">
+              <option value="side" data-i="side">Side</option><option value="bottom" data-i="bottom">Bottom</option><option value="top" data-i="top">Top</option>
+            </select></label>
+            <label><span data-i="tabMode">Menu buttons</span> <select id="tabModeSel" onchange="setTabMode(this.value)">
+              <option value="roll" data-i="rolling">Rolling (swipe / wheel)</option><option value="static" data-i="fixed">Fixed (arrows)</option>
+            </select></label>
+          </section>
+          <section class="set">
+            <label><span data-i="language">Language</span> <select id="langSel" onchange="setLang(this.value)">
+              <option value="en">English</option><option value="pt">Português</option>
+            </select></label>
+          </section>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div class="tabs-host">
+      <nav class="tabs">
+        <button class="tabs-toggle" id="menuToggle" onclick="toggleMenu()" title="Hide / show menu"></button>
+        <button class="tabs-nav" id="tabsPrev" onclick="pageTabs(-1)" hidden></button>
+        <div class="tabs-list">
+        <button data-tab="create" title="Create" onclick="showTab('create')"><span data-i="create">Create</span></button>
+        <button data-tab="sessions" title="Sessions" onclick="showTab('sessions')"><span data-i="sessions">Sessions</span></button>
+        <button data-tab="players" title="Players" onclick="showTab('players')"><span data-i="players">Players</span></button>
+        <button data-tab="pc" title="PC" onclick="showTab('pc')"><span data-i="pc">PC</span></button>
+        <button data-tab="spawn" title="Spawn" onclick="showTab('spawn')"><span data-i="spawn">Spawn</span></button>
+        <button data-tab="areas" title="Areas" onclick="showTab('areas')"><span data-i="areas">Areas</span></button>
+        <button data-tab="table" title="Table" onclick="showTab('table')"><span data-i="tableTab">Table</span></button>
+        </div>
+        <button class="tabs-nav" id="tabsNext" onclick="pageTabs(1)" hidden></button>
+      </nav>
+
+      <div class="screen">
+        <label data-show-on="players spawn pc areas"><span data-i="activeSession">Active session:</span> <select id="spawnSession" onchange="loadPlayers()"></select></label>
+        <div id="rejoinBar" class="rejoinbar"></div>
+
+        <section class="tab" id="tab-create">
+          <div class="card narrow">
+            <h2 data-i="newSession">New session</h2>
+            <input id="nameInput" data-ip="yourName" placeholder="Your name">
+            <button data-i="createSession" onclick="createSession()">Create session</button>
+          </div>
+        </section>
+
+        <section class="tab" id="tab-sessions">
+          <h2 data-i="yourSessions">Your sessions</h2>
+          <div id="invite" class="card invite"></div>
+          <p id="playerUrl" class="urlbar"></p>
+          <div id="sessions" class="cards" data-i="loading">Loading...</div>
+        </section>
+
+        <section class="tab" id="tab-players">
+          <h2 data-i="players">Players</h2>
+          <p class="muted" data-i="playersHelp">Each card is a player: who is online, their team and quick buttons. Use the buttons instead of hunting through the tabs.</p>
+          <div class="row"><button class="danger" data-i="clearField" onclick="clearField()">Clear the field</button><small id="fieldMsg" class="muted"></small></div>
+          <div id="playerList" class="cards pgrid"></div>
+        </section>
+
+        <section class="tab" id="tab-pc">
+          <select id="pcTrainer" onchange="pcPickTrainer(this.value)"></select>
+          <div class="pc master-pc">
+            <aside class="pc-side" id="pcDetail"></aside>
+            <div class="pc-main">
+              <div class="pc-head">
+                <button onclick="pcStep(-1)" aria-label="Previous box">&lsaquo;</button>
+                <b id="pcBoxName"></b>
+                <button onclick="pcStep(1)" aria-label="Next box">&rsaquo;</button>
+              </div>
+              <div class="pc-hint" id="pcHint" hidden></div>
+              <div class="pc-grid" id="pcGrid"></div>
+              <input id="pcFilter" class="pc-filter" data-ip="pcFilter" placeholder="Filter" oninput="renderPC()">
+            </div>
+            <aside class="pc-party">
+              <h3 data-i="pcParty">Party</h3>
+              <div id="pcParty"></div>
+              <button data-i="pcBoxList" onclick="pcToggleList()">Box List</button>
+            </aside>
+          </div>
+        </section>
+
+        <section class="tab" id="tab-spawn">
+          <div class="cols">
+            <div class="stack">
+            <div class="card">
+              <h3 class="step"><i>1</i><span data-i="stepWhich">Which Pokémon?</span></h3>
+              <div class="seg" id="srcSeg">
+                <button class="on" data-v="pick" onclick="setSource('pick')" data-i="srcPick">Choose a Pokémon</button>
+                <button data-v="area" onclick="setSource('area')" data-i="srcArea">Roll an area</button>
+              </div>
+
+              <div id="pickBox">
+                <input id="formSearch" class="searchbox" data-ip="searchPh" placeholder="Search (e.g. rotom)" oninput="filterForms()">
+                <div id="spawnFilters" class="filters"></div>
+                <div class="pickrow">
+                  <select id="formList" size="10"></select>
+                  <img id="preview" class="sprite big" alt="" hidden>
+                </div>
+                <h4 class="sub" data-i="stepDetails">Details (optional)</h4>
+                <div class="grid2">
+                  <label><span data-i="level">Level</span> <input id="levelInput" type="number" min="1" max="100" value="5"></label>
+                  <label><span data-i="gender">Gender</span> <select id="genderSel"></select></label>
+                  <label><span data-i="nature">Nature</span> <select id="natureSel"></select></label>
+                  <label><span data-i="ability">Ability</span> <select id="abilitySel"></select></label>
+                </div>
+              </div>
+
+              <div id="areaBox" hidden>
+                <label><span data-i="areaPick">Area</span> <select id="spawnArea" onchange="areaInfo()"></select></label>
+                <p id="areaNote" class="muted"></p>
+              </div>
+            </div>
+          <div class="card">
+              <h3 data-i="onField">On the field</h3>
+              <div id="activeList"></div>
+            </div>
+            </div>
+
+            <div class="stack">
+            <div class="card">
+              <h3 class="step"><i>2</i><span data-i="stepSend">Send it</span></h3>
+              <label><span data-i="sendTo">Wild, send to:</span> <select id="target"><option value="all" data-i="everyone">Everyone</option></select></label>
+              <label><span data-i="tries">Balls allowed</span> <input id="triesInput" type="number" min="0" max="99" value="3"></label>
+              <small class="muted" data-i="triesHint">0 = unlimited.</small>
+
+              <details class="adv">
+                <summary data-i="advanced">Advanced options</summary>
+                <label><span data-i="shiny">Shiny</span> <select id="shinySel"><option value="" data-i="shinyRandom">Random (1%)</option><option value="1" data-i="yes">Yes</option><option value="0" data-i="no">No</option></select></label>
+                <div class="field">
+                  <span data-i="catchRate">Chance to catch</span>
+                  <div class="seg" id="catchSeg">
+                    <button class="on" data-v="normal" onclick="setCatch('normal')" data-i="catchNormal">Normal roll</button>
+                    <button data-v="always" onclick="setCatch('always')">100%</button>
+                    <button data-v="never" onclick="setCatch('never')">0%</button>
+                  </div>
+                  <small class="muted" data-i="catchHint">100% always catches, 0% never does. Players do not see this.</small>
+                </div>
+              </details>
+
+              <button class="primary big" data-i="spawnWild" onclick="spawn()">Spawn (wild)</button>
+            </div>
+
+            <div class="card">
+              <h3 class="step"><i>+</i><span data-i="stepGive">Give directly</span></h3>
+              <label><span data-i="giveTo">Or give to:</span> <select id="giveTo"></select></label>
+              <button data-i="giveBtn" onclick="give()">Give to character</button>
+            </div>
+            </div>
+          </div>
+
+          <div id="spawnLog"></div>
+        </section>
+
+        <section class="tab" id="tab-table">
+          <h2 data-i="tableTab">Table</h2>
+          <p class="muted" data-i="tblHelpM">Everyone in the session sees this table. Type amounts on the list and throw the list, or press an item and drag it onto the table. each player grabs what he wants with his hand. You also have a hand: press and drag to move items.</p>
+          <div class="tblqty"><span data-i="tblTakeLbl">Take</span> <button onclick="tblTakeSet(TBL.take - 1)">-</button> <input id="tblTake" type="number" min="1" max="99999" value="1" inputmode="numeric" oninput="tblTakeType(this.value)"> <button onclick="tblTakeSet(TBL.take + 1)">+</button> <button onclick="tblTakeSet(10)">10</button> <button id="tblHalf" onclick="tblTakeSet(-1)">½</button> <button id="tblAllB" onclick="tblTakeSet(99999)" data-i="tblAll">All</button></div>
+          <div class="tblrow">
+            <canvas id="tblCanvas" class="tblcv"></canvas>
+            <div class="card tblside">
+              <h3 data-i="tblItemsH">Items</h3>
+              <input id="tblFilter" data-ip="pcFilter" placeholder="Filter" oninput="tblListRender()">
+              <div id="tblList" class="tbllist tblgrid"></div>
+              <div id="tblSel" class="tblsel"></div>
+              <button class="primary" data-i="tblThrowList" onclick="tblThrowList()">Throw the list</button>
+              <button data-i="tblListClear" onclick="tblListClear()">Zero the amounts</button>
+              <button class="danger" data-i="tblClear" onclick="tblClearAll()">Clear the table</button>
+              <p id="tblMsg" class="muted"></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="tab" id="tab-areas">
+          <div class="cols areas-cols">
+            <div class="card">
+              <h3 data-i="areas">Areas</h3>
+              <div id="areaList"></div>
+              <button onclick="areaPick(0)" data-i="newArea">+ New area</button>
+            </div>
+            <div class="card" id="areaEditor"></div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <p id="out"></p>
+</div>
+  <script src="/prefs.js"></script>
+  <script src="/assets/qr.js"></script>
+  <script src="/app.js"></script>
+  <script src="/table.js"></script>
+  <script>initTabs('create'); loadSessions(); pollRejoin(); loadForms(); loadAreas(); tblLoadItems(); setInterval(() => { pollRejoin(); loadPlayers(); loadActive(); loadInvite(); }, 3000); loadInvite();</script>
+</body>
+</html>

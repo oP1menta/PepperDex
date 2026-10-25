@@ -1,0 +1,8 @@
+Texturas do dado (d100)
+=======================
+1. Coloque aqui uma imagem quadrada que possa ser repetida (ex.: aco.png, madeira.png, 256x256).
+2. Em web/app.js, na lista DIE_SKINS, crie ou edite uma pele:
+     meu: { base: [150,156,164], edge: 'rgba(12,18,26,.65)', ink: '#10161d', texture: '/assets/dice/aco.png' },
+3. Para usar, no console do navegador (F12):  localStorage.setItem('ptu.die', 'meu')
+   (voltar ao padrao: localStorage.removeItem('ptu.die'))
+A textura e pintada em cada face por baixo da luz e da sombra. 'base' e a cor usada quando nao ha textura.

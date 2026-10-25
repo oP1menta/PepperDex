@@ -1,0 +1,196 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PTU - Dex</title>
+  <link rel="stylesheet" href="/style.css">
+  <script>try { var m = localStorage.getItem('ptu.mode') || 'default'; if (m === 'auto') m = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default'; document.documentElement.dataset.mode = m; } catch (e) {}</script>
+</head>
+<body>
+<div class="device">
+  <header id="topbar">
+    <div class="tl"><span class="leds"><i></i><i></i><i></i></span></div>
+    <div class="tc">
+      <button id="ball" class="ball" onclick="openNotif()" aria-label="Notifications" disabled></button><b id="ballCount"></b>
+    </div>
+    <div class="tr"><span id="ballText"></span>
+      <details class="settings"><summary data-i="settings">Settings</summary>
+        <div class="panel">
+          <section class="set" id="sessionSet">
+            <p id="welcome"></p>
+            <div id="sessionBtns" hidden>
+              <button data-i="campaigns" onclick="showHome()">Campaigns</button>
+              <button data-i="leave" onclick="leave()">Leave session</button>
+            </div>
+          </section>
+          <section class="set" id="appearance"></section>
+          <section class="set">
+            <h4 data-i="menu">Menu</h4>
+            <label><span data-i="menuPlace">Position</span> <select id="tabPos" onchange="setTabPos(this.value)">
+              <option value="side" data-i="side">Side</option><option value="bottom" data-i="bottom">Bottom</option><option value="top" data-i="top">Top</option>
+            </select></label>
+            <label><span data-i="tabMode">Menu buttons</span> <select id="tabModeSel" onchange="setTabMode(this.value)">
+              <option value="roll" data-i="rolling">Rolling (swipe / wheel)</option><option value="static" data-i="fixed">Fixed (arrows)</option>
+            </select></label>
+          </section>
+          <section class="set" id="soundSet">
+            <h4 data-i="soundHead">Sound</h4>
+            <label><span data-i="sound">Cry sounds</span> <input type="checkbox" id="soundBox"></label>
+            <label><span data-i="volume">Cry volume</span> <input type="range" id="volumeRange" min="0" max="100"></label>
+            <label><span data-i="sfx">Effect sounds (capture, dice)</span> <input type="checkbox" id="sfxBox"></label>
+            <label><span data-i="sfxVolume">Effects volume</span> <input type="range" id="sfxRange" min="0" max="100"></label>
+            <label><span data-i="holoSound">Hologram sound</span> <input type="checkbox" id="holoBox"></label>
+            <button type="button" onclick="sfx.up(0); setTimeout(() => sfx.knock(), 250); setTimeout(() => sfx.land(), 450); setTimeout(() => sfx.holo(), 500)" data-i="sfxTest">Test effects</button>
+          </section>
+          <section class="set">
+            <label><span data-i="language">Language</span> <select id="langSel" onchange="setLang(this.value)">
+              <option value="en">English</option><option value="pt">Português</option>
+            </select></label>
+          </section>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <div class="stage">
+    <!-- 1. who are you -->
+    <div id="nameScreen" class="screen" hidden>
+      <h2 data-i="whoAreYou">Who are you?</h2>
+      <input id="playerNameInput" data-ip="yourName" placeholder="Your name">
+      <button data-i="continue" onclick="saveName()">Continue</button>
+    </div>
+
+    <!-- 2. connect to a campaign and name your trainer -->
+    <div id="homeScreen" class="screen" hidden>
+      <p><span data-i="hi">Hi,</span> <b id="who"></b> <button class="link" data-i="changeName" onclick="changeName()">change name</button></p>
+      <div id="savedBox"></div>
+
+      <h2 data-i="connect">Connect</h2>
+      <input id="codeInput" data-ip="codePh" placeholder="Session code (e.g. K7P2)" maxlength="4">
+      <p><small data-i="bringHelp">Tick the characters to bring into the session:</small></p>
+      <div id="bringList"></div>
+      <button data-i="connect" onclick="join()">Connect</button>
+      <div id="rejoinBox" class="rejoin" hidden></div>
+
+      <h2 data-i="myChars">My characters</h2>
+      <p><small data-i="myCharsHelp">Made here, before any session. Each session gets its own independent copy.</small></p>
+      <div id="sheetList"></div>
+      <input id="sheetNameInput" data-ip="newChar" placeholder="New character name">
+      <button data-i="createChar" onclick="createSheet()">Create character</button>
+
+      <details>
+        <summary data-i="lost">Lost access to a session?</summary>
+        <p><small data-i="claimHelp">Type the session code above and the reconnect code the Master gave you.</small></p>
+        <input id="claimInput" data-ip="claimPh" placeholder="Reconnect code" maxlength="6">
+        <button data-i="reconnect" onclick="reconnect()">Reconnect</button>
+      </details>
+    </div>
+
+    <!-- 3. playing -->
+    <div id="playingBox" class="tabs-host" hidden>
+      <nav class="tabs">
+        <button class="tabs-toggle" id="menuToggle" onclick="toggleMenu()" title="Hide / show menu"></button>
+        <button class="tabs-nav" id="tabsPrev" onclick="pageTabs(-1)" hidden></button>
+        <div class="tabs-list">
+        <button data-tab="characters" title="Characters" onclick="showTab('characters')"><span data-i="characters">Characters</span></button>
+        <button data-tab="encounters" title="Encounters" onclick="showTab('encounters')"><span data-i="encounters">Encounters</span></button>
+        <button data-tab="pc" title="PC" onclick="showTab('pc')"><span data-i="pc">PC</span></button>
+        <button data-tab="dex" title="Pokédex" onclick="showTab('dex'); loadDex()"><span data-i="dex">Pokédex</span></button>
+        <button data-tab="bag" title="Bag" onclick="showTab('bag')"><span data-i="bag">Bag</span></button>
+        <button data-tab="table" title="Table" onclick="showTab('table')"><span data-i="tableTab">Table</span></button>
+        </div>
+        <button class="tabs-nav" id="tabsNext" onclick="pageTabs(1)" hidden></button>
+      </nav>
+
+      <div class="screen">
+        <section class="tab" id="tab-encounters">
+          <div id="field">
+            <p id="fieldEmpty" data-i="nothing">Nothing yet...</p>
+            <div id="sparks"></div>
+            <div id="arena" hidden>
+              <div class="grass"><img id="wildImg" class="sprite" alt=""></div>
+              <div id="wildInfo"></div>
+            </div>
+            <div id="ballPicker" hidden></div>
+            <div id="catchMsg" hidden></div>
+            <div id="rollBox" hidden></div>
+            <img id="flyBall" class="ballimg" alt="" hidden>
+            <i id="ballShadow"></i>
+            <div id="stars"></div>
+            <div id="fieldBar">
+              <button id="prevWild" onclick="stepWild(-1)" aria-label="Previous">&lsaquo;</button>
+              <button id="catchBtn" data-i="capture" onclick="captureWild()">Capture</button>
+              <button id="nextWild" onclick="stepWild(1)" aria-label="Next">&rsaquo;</button>
+            </div>
+            <div id="wildCount"></div>
+          </div>
+        </section>
+
+        <section class="tab" id="tab-characters">
+          <h2 data-i="characters">Characters</h2>
+          <div id="trainerList"></div>
+          <h2 data-i="addFromMine">Add one of my characters</h2>
+          <select id="sheetSelect"></select>
+          <button data-i="addToSession" onclick="placeSheet()">Add to this session</button>
+          <p><small data-i="manageHelp">Create or delete characters on the Campaigns screen.</small></p>
+        </section>
+
+        <section class="tab" id="tab-dex">
+          <div class="dexbar"><h2 data-i="dex">Pokédex</h2><button type="button" id="dexShinyBtn" class="dexshiny" onclick="dexToggleShiny()"></button></div>
+          <button type="button" id="dexPackBtn" class="packbtn" onclick="packOpenUi()"><i class="packicon"></i><span></span></button>
+          <p id="dexSummary" class="muted"></p>
+          <div id="dexAlbum" class="dexbody">
+            <nav id="dexTabs" class="dexnav"></nav>
+            <div id="dexGrid" class="dexalbum"></div>
+          </div>
+          <p id="dexMsg" class="dexmsg"></p>
+          <h3 data-i="dexHand">Stickers in hand</h3>
+          <div id="dexHand" class="dexhand"></div>
+        </section>
+
+        <section class="tab" id="tab-table">
+          <h2 data-i="tableTab">Table</h2>
+          <p class="muted" data-i="tblHelp">Move your hand over the table. Press on an item to pick it up, move it and let go: on the table to throw it, over the chest to keep it.</p>
+          <div class="tblqty"><span data-i="tblTakeLbl">Take</span> <button onclick="tblTakeSet(TBL.take - 1)">-</button> <input id="tblTake" type="number" min="1" max="99999" value="1" inputmode="numeric" oninput="tblTakeType(this.value)"> <button onclick="tblTakeSet(TBL.take + 1)">+</button> <button onclick="tblTakeSet(10)">10</button> <button id="tblHalf" onclick="tblTakeSet(-1)">½</button> <button id="tblAllB" onclick="tblTakeSet(99999)" data-i="tblAll">All</button></div>
+          <canvas id="tblCanvas" class="tblcv"></canvas>
+          <div id="tblChest" class="tblchest"></div>
+          <p id="tblMsg" class="muted"></p>
+        </section>
+
+        <section class="tab" id="tab-bag"><h2 data-i="bag">Bag</h2><div id="bagList"></div></section>
+        <section class="tab" id="tab-pc">
+          <select id="pcTrainer" onchange="pcPickTrainer(this.value)"></select>
+          <div class="pc">
+            <aside class="pc-side" id="pcDetail"></aside>
+            <div class="pc-main">
+              <div class="pc-head">
+                <button onclick="pcStep(-1)" aria-label="Previous box">&lsaquo;</button>
+                <b id="pcBoxName"></b>
+                <button onclick="pcStep(1)" aria-label="Next box">&rsaquo;</button>
+              </div>
+              <div class="pc-hint" id="pcHint" data-i="pcHint" hidden>Hold over the arrows to change box</div>
+              <div class="pc-grid" id="pcGrid"></div>
+              <input id="pcFilter" class="pc-filter" data-ip="pcFilter" placeholder="Filter" oninput="renderPC()">
+            </div>
+            <aside class="pc-party">
+              <h3 data-i="pcParty">Party</h3>
+              <div id="pcParty"></div>
+              <button data-i="pcBoxList" onclick="pcToggleList()">Box List</button>
+              <div class="pc-trash" id="pcTrash" data-zone="trash" onclick="pcClick('trash', 0, 0)"><svg viewBox="0 0 40 44" width="34" height="38"><g class="lid"><rect x="5" y="8" width="30" height="5" rx="2"/><rect x="15" y="3" width="10" height="5" rx="2"/></g><path class="bin" d="M8 15h24l-2 25a3 3 0 0 1-3 3H13a3 3 0 0 1-3-3z"/><path class="slats" d="M15 20v17M20 20v17M25 20v17"/></svg><span data-i="pcTrash">Release</span></div>
+            </aside>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <p id="out"></p>
+</div>
+  <script src="/prefs.js"></script>
+  <script src="/app.js"></script>
+  <script src="/table.js"></script>
+  <script>initTabs('encounters'); restorePlayer();</script>
+  <div id="packOv" class="packov" hidden></div>
+</body>
+</html>
