@@ -80,6 +80,12 @@
       <button data-i="createChar" onclick="createSheet()">Create character</button>
 
       <details>
+        <summary data-i="otherDev">Use on another device</summary>
+        <p><small data-i="otherDevHelp">Copy this link and open it on the other device: same name, characters and campaigns. Keep it private.</small></p>
+        <button onclick="copyLoginLink()" data-i="copyLink">Copy link</button> <span id="loginLinkOut"></span>
+      </details>
+
+      <details>
         <summary data-i="lost">Lost access to a session?</summary>
         <p><small data-i="claimHelp">Type the session code above and the reconnect code the Master gave you.</small></p>
         <input id="claimInput" data-ip="claimPh" placeholder="Reconnect code" maxlength="6">
@@ -98,6 +104,7 @@
         <button data-tab="pc" title="PC" onclick="showTab('pc')"><span data-i="pc">PC</span></button>
         <button data-tab="dex" title="Pokédex" onclick="showTab('dex'); loadDex()"><span data-i="dex">Pokédex</span></button>
         <button data-tab="bag" title="Bag" onclick="showTab('bag')"><span data-i="bag">Bag</span></button>
+        <button data-tab="map" title="Map" onclick="showTab('map')"><span data-i="mapTab">Map</span></button>
         <button data-tab="table" title="Table" onclick="showTab('table')"><span data-i="tableTab">Table</span></button>
         </div>
         <button class="tabs-nav" id="tabsNext" onclick="pageTabs(1)" hidden></button>
@@ -149,6 +156,15 @@
           <div id="dexHand" class="dexhand"></div>
         </section>
 
+        <section class="tab" id="tab-map">
+          <h2 data-i="mapTab">Map</h2>
+          <p class="muted" data-i="mapHelp">The map the Master is showing. Drag to move around; two fingers zoom.</p>
+          <b id="mapStatus"></b>
+          <canvas id="mapCanvas" class="mapcv"></canvas>
+          <p class="muted" data-i="mapMineHelp">Tap your character or a Pokemon to put it on the map or take it off. Press and drag a piece to move it.</p>
+          <div id="mapMine" class="mapmine"></div>
+        </section>
+
         <section class="tab" id="tab-table">
           <h2 data-i="tableTab">Table</h2>
           <p class="muted" data-i="tblHelp">Move your hand over the table. Press on an item to pick it up, move it and let go: on the table to throw it, over the chest to keep it.</p>
@@ -190,6 +206,7 @@
   <script src="/prefs.js"></script>
   <script src="/app.js"></script>
   <script src="/table.js"></script>
+  <script src="/maps.js"></script>
   <script>initTabs('encounters'); restorePlayer();</script>
   <div id="packOv" class="packov" hidden></div>
 </body>

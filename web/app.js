@@ -104,6 +104,7 @@ function showTab(name) {
   playPendingIntro();
   if (name === 'spawn' && typeof loadActive === 'function') loadActive();
   if (typeof tableSync === 'function') tableSync(name);
+  if (typeof mapSync === 'function') mapSync(name);
   history.replaceState(null, '', '#' + name);
 }
 
@@ -298,6 +299,7 @@ function saveName() {
   localStorage.setItem(NAME, n);
   out.textContent = '';
   showHome();
+  if (codeInput.value.length === 4) join();   // came from a QR: first name typed = in
 }
 
 function changeName() {
@@ -427,8 +429,33 @@ async function reconnect() {
 function restorePlayer() {
   localStorage.removeItem('ptu.player');  // old format, no token
   if (!localStorage.getItem(NAME)) { screen('nameScreen'); return; }
-  const code = localStorage.getItem(CURRENT);
-  if (code && saved()[code]) openCampaign(code); else showHome();
+  const qr = (new URLSearchParams(location.search).get('code') || '').toUpperCase().slice(0, 4);   // opened from the QR / invite link
+  if (qr && saved()[qr]) localStorage.setItem(CURRENT, qr);
+  const code = qr || localStorage.getItem(CURRENT);
+  if (code && saved()[code]) openCampaign(code);
+  else { showHome(); if (qr) { codeInput.value = qr; join(); } }   // known name + QR = straight in, nothing to type
+}
+
+// "Use on another device": a link with my person key, name and logins. It sits after the # so it never goes to the server.
+function loginLink() {
+  const d = { p: person(), n: localStorage.getItem(NAME), s: saved(), c: localStorage.getItem(CURRENT) };
+  return location.origin + '/#login=' + btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+}
+function takeLoginLink() {
+  const m = /#login=([^&]+)/.exec(location.hash); if (!m) return;
+  try {
+    const d = JSON.parse(decodeURIComponent(escape(atob(m[1]))));
+    if (/^[0-9a-f]{32}$/.test(d.p) && d.n) {
+      localStorage.setItem('ptu.person', d.p); localStorage.setItem(NAME, d.n);
+      localStorage.setItem(SAVED, JSON.stringify({ ...saved(), ...d.s })); if (d.c) localStorage.setItem(CURRENT, d.c);
+    }
+  } catch (e) { /* bad link: ignore */ }
+  history.replaceState(null, '', location.pathname + location.search);
+}
+async function copyLoginLink() {
+  const l = loginLink();
+  try { await navigator.clipboard.writeText(l); loginLinkOut.textContent = t('linkCopied'); }
+  catch (e) { loginLinkOut.innerHTML = '<input readonly value="' + esc(l) + '" onfocus="this.select()">'; }
 }
 
 async function openCampaign(code) {
@@ -2045,7 +2072,7 @@ async function loadPlayers() {
   const r = await fetch('/api/players?code=' + spawnSession.value);
   if (!r.ok) return;
   const list = (await r.json()).players;
-  pcSetData(list.flatMap(p => p.trainers.map(tr => ({ ...tr, owner: p.name }))));  // the PC tab
+  pcSetData(list.flatMap(p => p.trainers.map(tr => ({ ...tr, owner: p.name, ownerId: p.id }))));  // the PC tab
   pollRequests();
 
   // the list is rebuilt every 3 s: leave it alone while the Master is typing in it or nothing changed
@@ -2824,3 +2851,4 @@ async function packRip(cap) {
     '<button type="button" class="primary" onclick="packClose()">' + t('packKeep') + '</button>';
   items.forEach((e, i) => setTimeout(() => sfx.reveal(e.shiny), Math.min(i, 14) * 280 + 60));
 }
+takeLoginLink();

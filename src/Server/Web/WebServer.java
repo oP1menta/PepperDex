@@ -21,6 +21,8 @@ import Server.Services.AreaServices;
 import Server.Services.CaptureServices;
 import Server.Services.Pokedex;
 import Server.Services.TableServices;
+import Server.Services.MapServices;
+import Server.Services.MapTokens;
 import Server.Services.TrainerProfiles;
 import Server.Services.PokemonServices;
 import Server.Services.SessionServices;
@@ -43,6 +45,8 @@ public class WebServer {
     private SpawnFeed spawnFeed;
     private final Pokedex pokedex = new Pokedex();
     private final TrainerProfiles profiles = new TrainerProfiles();
+    private final MapServices maps = new MapServices();
+    private final MapTokens mapTokens = new MapTokens();
     private final TableServices table = new TableServices();
     private HelpRequests helpRequests;
     private AreaServices areaServices;
@@ -584,6 +588,92 @@ public class WebServer {
             reply(exchange, 200, "application/json", "{}");
         });
 
+        // ---- maps ----
+        // Master: list, create, rename, delete, paint, show to a session
+        httpServer.createContext("/api/maps", exchange -> {
+            if (!isLocal(exchange)) { reply(exchange, 403, "application/json", error("Master only")); return; }
+            Map<String, String> form = exchange.getRequestMethod().equals("POST") ? readForm(exchange) : parse(exchange.getRequestURI().getRawQuery());
+            String code = form.getOrDefault("code", "").trim().toUpperCase();
+            String action = form.getOrDefault("action", "list");
+            int id = intOr(form.get("id"), -1);
+            String name = form.getOrDefault("name", "").trim();
+            if (name.length() > 40) name = name.substring(0, 40);
+            switch (action) {
+                case "create" -> { if (name.isEmpty()) name = "Mapa " + (System.currentTimeMillis() % 1000); id = maps.create(name).getId(); }
+                case "rename" -> { if (!name.isEmpty()) maps.rename(id, name); }
+                case "delete" -> { maps.delete(id); mapTokens.dropMap(id); }
+                case "show" -> maps.show(code, id);
+                case "paint" -> {
+                    String[] parts = form.getOrDefault("cells", "").split(",");
+                    int[] xy = new int[Math.min(parts.length, 4000) / 2 * 2];
+                    for (int k = 0; k < xy.length; k++) xy[k] = intOr(parts[k], 0);
+                    if (maps.paint(id, form.getOrDefault("tool", ""), xy) < 0) { reply(exchange, 404, "application/json", error("Unknown map")); return; }
+                }
+                case "restore" -> {
+                    String[] parts = form.getOrDefault("cells", "").split(",");
+                    int[] xyv = new int[Math.min(parts.length, 6000) / 3 * 3];
+                    for (int k = 0; k < xyv.length; k++) xyv[k] = intOr(parts[k], 0);
+                    if (maps.restore(id, xyv) < 0) { reply(exchange, 404, "application/json", error("Unknown map")); return; }
+                }
+                case "get" -> { reply(exchange, 200, "application/json", withTokens(id, maps.mapJson(id, intOr(form.get("since"), 0)))); return; }
+                default -> { }
+            }
+            reply(exchange, 200, "application/json", "{\"id\":" + id + ",\"maps\":" + maps.listJson(code) + "}");
+        });
+
+        // Players (and the Master's own page): the map this session is looking at. v = the version already held.
+        httpServer.createContext("/api/map", exchange -> {
+            Map<String, String> data = parse(exchange.getRequestURI().getRawQuery());
+            String code = data.getOrDefault("code", "").trim().toUpperCase();
+            if (!isLocal(exchange) && sessionPlayerOrNull(data) == null) { reply(exchange, 403, "application/json", error("removed")); return; }
+            int id = intOr(data.get("id"), 0);
+            if (id == 0 || !isLocal(exchange)) id = maps.activeId(code);
+            String json = withTokens(id, maps.mapJson(id, intOr(data.get("v"), 0)));
+            SessionParticipant who = sessionPlayerOrNull(data);
+            if (who != null) json = json.substring(0, json.length() - 1) + ",\"me\":" + who.getPlayerId() + "}";
+            reply(exchange, 200, "application/json", json);
+        });
+
+        // Tokens on the map. A player moves his own pieces on the map the Master is showing; the Master does anything on any map.
+        // action = add | move | remove
+        httpServer.createContext("/api/map/token", exchange -> {
+            Map<String, String> form = readForm(exchange);
+            String code = form.getOrDefault("code", "").trim().toUpperCase();
+            SessionParticipant me = form.get("token") == null ? null : sessionPlayerOrNull(form);
+            boolean master = me == null;
+            if (master && !isLocal(exchange)) { reply(exchange, 403, "application/json", error("removed")); return; }
+            int mapId = master ? intOr(form.get("mapId"), 0) : maps.activeId(code);
+            if (mapId == 0) { reply(exchange, 404, "application/json", error("No map")); return; }
+            String action = form.getOrDefault("action", "");
+            int id = intOr(form.get("id"), -1), x = intOr(form.get("x"), 0), y = intOr(form.get("y"), 0), ref = intOr(form.get("ref"), 0);
+            String type = form.getOrDefault("type", "");
+            switch (action) {
+                case "add" -> {
+                    int owner = 0;
+                    if (!master) {
+                        owner = me.getPlayerId();
+                        boolean mine = false;
+                        if (type.equals("player")) { for (Trainer t : sessionServices.trainersOf(owner)) if (t.getId() == ref) mine = true; }
+                        else if (type.equals("pokemon")) { for (Trainer t : sessionServices.trainersOf(owner)) for (Pokemon p : pokemonServices.pokemonOf(t.getId())) if (p.getId() == ref) mine = true; }
+                        if (!mine) { reply(exchange, 403, "application/json", error("Not yours")); return; }
+                    } else owner = intOr(form.get("owner"), 0);
+                    id = mapTokens.add(mapId, type, owner, ref, form.get("name"), form.get("color"), form.get("s"), "1".equals(form.get("sh")), x, y);
+                }
+                case "move" -> {
+                    int owner = mapTokens.ownerOf(mapId, id);
+                    if (owner < 0 || !master && owner != me.getPlayerId()) { reply(exchange, 403, "application/json", error("Not yours")); return; }
+                    mapTokens.move(mapId, id, x, y);
+                }
+                case "remove" -> {
+                    int owner = mapTokens.ownerOf(mapId, id);
+                    if (owner < 0 || !master && owner != me.getPlayerId()) { reply(exchange, 403, "application/json", error("Not yours")); return; }
+                    mapTokens.remove(mapId, id);
+                }
+                default -> { }
+            }
+            reply(exchange, 200, "application/json", "{\"id\":" + id + ",\"tokens\":" + mapTokens.json(mapId) + "}");
+        });
+
         // My character's numbers (the six stats and the current HP). Level and XP are the Master's.
         httpServer.createContext("/api/profile", exchange -> {
             Map<String, String> form = readForm(exchange);
@@ -904,8 +994,10 @@ public class WebServer {
                 pokemonId = Integer.parseInt(form.getOrDefault("pokemonId", ""));
             } catch (NumberFormatException e) { reply(exchange, 400, "application/json", error("Bad numbers")); return; }
             if (!isMine(me, trainerId)) { reply(exchange, 404, "application/json", error("Not your trainer")); return; }
+            dexOwn(pokemonId);   // the form it has now counts too, even if he never opened the album with it
             String problem = pokemonServices.evolve(trainerId, pokemonId, form.getOrDefault("to", ""));
             if (problem != null) { reply(exchange, 400, "application/json", error(problem)); return; }
+            dexOwn(pokemonId);
             reply(exchange, 200, "application/json", trainersJson(me.getPlayerId()));
         });
 
@@ -916,8 +1008,10 @@ public class WebServer {
             int pokemonId;
             try { pokemonId = Integer.parseInt(form.getOrDefault("pokemonId", "")); }
             catch (NumberFormatException e) { reply(exchange, 400, "application/json", error("Bad numbers")); return; }
+            dexOwn(pokemonId);
             String problem = pokemonServices.evolve(null, pokemonId, form.getOrDefault("to", ""));
             if (problem != null) { reply(exchange, 400, "application/json", error(problem)); return; }
+            dexOwn(pokemonId);
             reply(exchange, 200, "application/json", "{}");
         });
 
@@ -1149,6 +1243,14 @@ public class WebServer {
     //============HELPERS=============
 
     // The player of a request with code + token, or null
+    // Every step of an evolution line is a form he owned: its sticker must not be skipped when he evolves twice before opening the album.
+    // Called before and after each evolution.
+    private void dexOwn(int pokemonId) {
+        Pokemon p = sessionServices.getRepository().findPokemonById(pokemonId);
+        Trainer t = p == null || p.getTrainerId() == null ? null : sessionServices.getRepository().findTrainerById(p.getTrainerId());
+        if (t != null && !pokedex.wiped(t.getPlayerId())) pokedex.caught(t.getPlayerId(), p.getFormId(), p.getLevel(), p.isShiny());
+    }
+
     private boolean isMine(SessionParticipant me, int trainerId) {
         for (Trainer t : sessionServices.trainersOf(me.getPlayerId())) if (t.getId() == trainerId) return true;
         return false;
@@ -1174,6 +1276,11 @@ public class WebServer {
     }
 
     // [{"id":1,"name":"Roberto"}, ...]
+    // the map JSON plus the pieces standing on it (they change often, so they travel with every poll)
+    private String withTokens(int mapId, String json) {
+        return mapId == 0 || !json.endsWith("}") ? json : json.substring(0, json.length() - 1) + ",\"tokens\":" + mapTokens.json(mapId) + "}";
+    }
+
     private static int intOr(String v, int def) { try { return Integer.parseInt(v.trim()); } catch (Exception e) { return def; } }
 
     // stats = hp,atk,def,spatk,spdef,spd (comma separated); hp = current HP. Either may be missing.

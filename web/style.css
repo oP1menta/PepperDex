@@ -985,3 +985,39 @@ h4.sub { margin: 14px 0 2px; font-size: .85rem; color: var(--label); text-transf
 .pstat { min-width: 0; }
 .pstat button { padding: 2px 8px; }
 .pstat div { gap: 4px; }
+
+/* maps */
+.maprow { display: flex; gap: 8px; align-items: flex-start; }
+.maplist { display: flex; flex-direction: column; gap: 6px; flex: 0 0 76px; max-height: 70vh; overflow-y: auto; }
+.maplist button { width: 100%; margin: 0; padding: 6px 4px; font-size: .75rem; }
+.maplist .mapplus { font-size: 1.6rem; line-height: 1; padding: 2px; }
+.maplist .on { outline: 3px solid var(--yellow, #f9c22e); }
+.maplist .shown { background: #2f8f4e; }
+.mapcv { display: block; flex: 1 1 0; min-width: 0; width: 100%; height: min(70vh, 560px); touch-action: none; border-radius: 12px; border: 2px solid var(--line, #4f86a3); cursor: grab; user-select: none; -webkit-user-select: none; }
+#tab-map .mapcv { height: min(72vh, 620px); }
+.maptools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 6px 0; }
+.maptools button { width: auto; margin: 0; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; }
+.maptools button.on { background: var(--yellow, #f9c22e); color: #000; }
+.sw { width: 16px; height: 16px; border-radius: 3px; border: 1px solid #0006; display: inline-block; }
+.sw-grass { background: #5db24a; } .sw-water { background: #3b86d8; } .sw-cave { background: #5a5048; } .sw-road { background: #cfae72; } .sw-elev { background: linear-gradient(#9ccf6a 70%, #7d5a3a 70%); } .sw-wall { background: #7b7f87; }
+#tab-maps .maprow > .mapcv { width: auto; }
+.sw-house { background: linear-gradient(#b94a3b 55%, #ece0c4 55%); }
+
+/* pieces */
+.maptok { margin-top: 8px; display: grid; gap: 6px; }
+.mapchips { display: inline-flex; flex-wrap: wrap; gap: 4px; vertical-align: middle; }
+.mapchips .chip, .mmine .chip { margin: 0; padding: 2px 8px; width: auto; display: inline-flex; align-items: center; gap: 4px; }
+.mmine .chip.on, .mapchips .chip.on { outline: 2px solid var(--yellow, #f9c22e); }
+.mapmine { display: grid; gap: 6px; margin-top: 6px; }
+.mmine { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.mmine img.sprite { width: 36px; height: 36px; }
+.maptok select { width: auto; margin: 0; }
+#mapSpecies{width:12em}
+
+.sw-sand { background: #e6d79e; } .sw-snow { background: #f1f6fa; } .sw-dirt { background: #9a7448; }
+.mapvars { gap: 6px; }
+.mapvars button.mapvar { flex-direction: column; gap: 2px; padding: 4px; background: #1b2733; color: inherit; border: 2px solid transparent; }
+.mapvars button.mapvar.on { border-color: var(--yellow, #f9c22e); background: #243445; color: inherit; }
+.mapvars button.mapvar canvas { display: block; border-radius: 4px; }
+.mapvars button.mapvar span { font-size: 11px; }
+.sw-tree { background: radial-gradient(circle at 50% 40%, #3e9a43 55%, #6b4a2a 56%); }

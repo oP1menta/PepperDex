@@ -47,6 +47,7 @@
         <button data-tab="pc" title="PC" onclick="showTab('pc')"><span data-i="pc">PC</span></button>
         <button data-tab="spawn" title="Spawn" onclick="showTab('spawn')"><span data-i="spawn">Spawn</span></button>
         <button data-tab="areas" title="Areas" onclick="showTab('areas')"><span data-i="areas">Areas</span></button>
+        <button data-tab="maps" title="Maps" onclick="showTab('maps')"><span data-i="mapTabM">Maps</span></button>
         <button data-tab="table" title="Table" onclick="showTab('table')"><span data-i="tableTab">Table</span></button>
         </div>
         <button class="tabs-nav" id="tabsNext" onclick="pageTabs(1)" hidden></button>
@@ -172,6 +173,51 @@
           <div id="spawnLog"></div>
         </section>
 
+        <section class="tab" id="tab-maps">
+          <h2 data-i="mapTabM">Maps</h2>
+          <p class="muted" data-i="mapHelpM">Build maps with blocks and show one to the players. Pick a block below and paint (press and drag). Use the Hand to move around; mouse wheel or two fingers zoom. The + creates a new map; click a map to edit it.</p>
+          <div class="maptools">
+            <b id="mapStatus"></b>
+            <button id="mapShowBtn" class="primary" onclick="mapToggleShow()" data-i="mapShow">Show to players</button>
+            <button onclick="mapRename()" data-i="mapRename">Rename</button>
+            <button class="danger" onclick="mapDelete()" data-i="mapDelete">Delete</button>
+          </div>
+          <div id="mapTools" class="maptools blocks">
+            <button data-tool="hand" class="on" onclick="mapTool('hand')" data-i="mtHand">Hand</button>
+            <button data-tool="grass" onclick="mapTool('grass')"><i class="sw sw-grass"></i><span data-i="mtGrass">Grass</span></button>
+            <button data-tool="sand" onclick="mapTool('sand')"><i class="sw sw-sand"></i><span data-i="mtSand">Sand</span></button>
+            <button data-tool="snow" onclick="mapTool('snow')"><i class="sw sw-snow"></i><span data-i="mtSnow">Snow</span></button>
+            <button data-tool="dirt" onclick="mapTool('dirt')"><i class="sw sw-dirt"></i><span data-i="mtDirt">Dirt</span></button>
+            <button data-tool="water" onclick="mapTool('water')"><i class="sw sw-water"></i><span data-i="mtWater">Water</span></button>
+            <button data-tool="cave" onclick="mapTool('cave')"><i class="sw sw-cave"></i><span data-i="mtCave">Cave</span></button>
+            <button data-tool="road" onclick="mapTool('road')"><i class="sw sw-road"></i><span data-i="mtRoad">Road / bridge</span></button>
+            <button data-tool="elev" onclick="mapTool('elev')"><i class="sw sw-elev"></i><span data-i="mtElev">Elevation</span></button>
+            <button data-tool="flat" onclick="mapTool('flat')" data-i="mtFlat">Lower</button>
+            <button data-tool="wall" onclick="mapTool('wall')"><i class="sw sw-wall"></i><span data-i="mtWall">Wall</span></button>
+            <button data-tool="house" onclick="mapTool('house')"><i class="sw sw-house"></i><span data-i="mtHouse">House</span></button>
+            <button data-tool="tree" onclick="mapTool('tree')"><i class="sw sw-tree"></i><span data-i="mtTree">Forest</span></button>
+            <button data-tool="bare" onclick="mapTool('bare')" data-i="mtBare">Clear top</button>
+            <button data-tool="erase" onclick="mapTool('erase')" data-i="mtErase">Erase</button>
+          </div>
+          <div id="mapVars" class="maptools mapvars" hidden></div>
+          <div class="maptools">
+            <span data-i="mapBrushLbl">Brush</span>
+            <span id="mapBrush"><button data-n="1" class="on" onclick="mapBrush(1)">1x1</button> <button data-n="3" onclick="mapBrush(3)">3x3</button> <button data-n="5" onclick="mapBrush(5)">5x5</button></span>
+            <button onclick="mapUndo()" data-i="mapUndo">Undo</button>
+            <button onclick="mapCenter(); MAP.dirty = true" data-i="mapCenterBtn">Center</button>
+          </div>
+          <div class="maprow"><div id="mapList" class="maplist"></div><canvas id="mapCanvas" class="mapcv"></canvas></div>
+          <div class="card maptok" id="mapTokens">
+            <h3 data-i="mapTokH">Pieces on the map</h3>
+            <p class="muted" data-i="mapTokHelp">Click to put a piece in the middle of the view; drag it with the Hand tool. A piece placed twice is just moved. The x removes it.</p>
+            <div class="maptools"><button onclick="mapAddNpc()" data-i="mapAddNpc">+ NPC</button></div>
+            <div class="maptools"><select id="mapTrSel" onchange="mapMineSig=''; mapRenderMine()"></select><span id="mapTrChips" class="mapchips"></span></div>
+            <div class="maptools"><input id="mapSpecies" list="mapSpList" placeholder="Pokémon" onfocus="mapFillSp()" onkeydown="if(event.key==='Enter')mapAddSpecies()"><datalist id="mapSpList"></datalist><label><input type="checkbox" id="mapSpShiny"> shiny</label> <button onclick="mapAddSpecies()">+ Pokémon</button></div>
+            <div><small data-i="mapWildH">Wild Pokemon on the field</small> <span id="mapWildChips" class="mapchips"></span></div>
+            <div><small data-i="mapOnMap">On this map</small> <span id="mapTokList" class="mapchips"></span></div>
+          </div>
+        </section>
+
         <section class="tab" id="tab-table">
           <h2 data-i="tableTab">Table</h2>
           <p class="muted" data-i="tblHelpM">Everyone in the session sees this table. Type amounts on the list and throw the list, or press an item and drag it onto the table. each player grabs what he wants with his hand. You also have a hand: press and drag to move items.</p>
@@ -212,6 +258,7 @@
   <script src="/assets/qr.js"></script>
   <script src="/app.js"></script>
   <script src="/table.js"></script>
+  <script src="/maps.js"></script>
   <script>initTabs('create'); loadSessions(); pollRejoin(); loadForms(); loadAreas(); tblLoadItems(); setInterval(() => { pollRejoin(); loadPlayers(); loadActive(); loadInvite(); }, 3000); loadInvite();</script>
 </body>
 </html>
