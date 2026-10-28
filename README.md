@@ -59,6 +59,32 @@ Tudo funciona em **português e inglês** (troque em *Configurações*).
   <img src="docs/img/player-table.jpg" width="190">
 </p>
 
+## Vídeos curtos
+
+**Spawn (Mestre e jogador lado a lado)**
+
+<img src="docs/gif/spawn.gif" width="560">
+
+**Captura**
+
+<img src="docs/gif/captura.gif" width="260">
+
+**Evolução**
+
+<img src="docs/gif/evolucao.gif" width="260">
+
+**Mover Pokémon (equipe ↔ PC)**
+
+<img src="docs/gif/mover-pokemon.gif" width="260">
+
+**Pegar item da mesa**
+
+<img src="docs/gif/mesa-item.gif" width="260">
+
+**Colar figurinha**
+
+<img src="docs/gif/figurinha.gif" width="260">
+
 ## Para o Mestre: baixar e jogar
 
 1. Abra a aba **Releases** deste repositório.
@@ -202,6 +228,32 @@ Everything works in **Portuguese and English** (switch in *Settings*). The scree
   <img src="docs/img/player-map.jpg" width="190">
   <img src="docs/img/player-table.jpg" width="190">
 </p>
+
+## Short clips
+
+**Spawn (GM and player side by side)**
+
+<img src="docs/gif/spawn.gif" width="560">
+
+**Capture**
+
+<img src="docs/gif/captura.gif" width="260">
+
+**Evolution**
+
+<img src="docs/gif/evolucao.gif" width="260">
+
+**Move a Pokémon (party ↔ PC)**
+
+<img src="docs/gif/mover-pokemon.gif" width="260">
+
+**Take an item from the table**
+
+<img src="docs/gif/mesa-item.gif" width="260">
+
+**Stick a sticker**
+
+<img src="docs/gif/figurinha.gif" width="260">
 
 ## For the GM: download and play
 
