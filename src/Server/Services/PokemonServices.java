@@ -25,6 +25,7 @@ import java.util.Random;
 import Server.Pokemon.Pokemon;
 import Server.Evolution.Evolution;
 import Server.Evolution.EvolutionCondition;
+import Server.Pokemon.PokemonVitamin;
 import Server.PokemonData.Nature;
 import Server.Pokemon.PokemonAttributePoints;
 
@@ -527,6 +528,8 @@ public class PokemonServices {
             PokemonAttributePoints row = repository.findPokemonAttributePoints(p.getId(), STATS[i]);
             pts[i] = row == null ? 0 : row.getPoints();
         }
+        int[] vit = vitaminsOf(p);
+        for (int i = 0; i < 6; i++) base[i] += vit[i];   // each vitamin is +1 base
         int[] free = new int[6];
         List<String> exceptions = repository.findStatExceptions(p.getId());
         for (int i = 0; i < 6; i++) free[i] = exceptions.contains(STATS[i]) ? 1 : 0;
@@ -582,6 +585,108 @@ public class PokemonServices {
         int[][] s = statArrays(p);
         return "\"nature\":\"" + (nature == null ? "" : nature.getName()) + "\",\"ability\":\"" + (ability == null ? "" : ability.getName().replace("\"", "")) + "\""
             + ",\"base\":" + arr(s[0]) + ",\"nat\":" + arr(s[1]) + ",\"pts\":" + arr(s[2]) + ",\"caps\":" + capsJson(p.getFormId());
+    }
+
+    //============ITEMS ON A POKEMON=============
+
+    // ponytail: PTU's cap on vitamins per Pokemon, edit here if the table plays another number
+    public static final int VITAMIN_MAX = 5;
+    private static final String[] VITAMINS = {"HP Up", "Protein", "Iron", "Calcium", "Zinc", "Carbos"};   // same order as STATS
+    private int[] vitaminIds;
+
+    private synchronized int[] vitaminIds() {
+        if (vitaminIds == null) {
+            int[] ids = new int[6];
+            for (Server.Item.Item it : repository.findAllItems()) for (int i = 0; i < 6; i++) if (it.getName().equals(VITAMINS[i])) ids[i] = it.getId();
+            vitaminIds = ids;
+        }
+        return vitaminIds;
+    }
+
+    // vitamins taken, per stat
+    private int[] vitaminsOf(Pokemon p) {
+        int[] ids = vitaminIds(), n = new int[6];
+        for (int i = 0; i < 6; i++) {
+            PokemonVitamin row = ids[i] == 0 ? null : repository.findPokemonVitamin(p.getId(), ids[i]);
+            n[i] = row == null ? 0 : row.getQuantity();
+        }
+        return n;
+    }
+
+    private static final java.util.regex.Pattern MIN_LEVEL = java.util.regex.Pattern.compile("(?i)min+imum\\s*(\\d+)");
+
+    // Uses one item on one of the trainer's Pokemon. Returns "!reason" when it can't (nothing is spent), else a short message.
+    // arg = the species to evolve into (stones). The caller takes the item out of the bag when the answer isn't "!...".
+    public synchronized String applyItem(int trainerId, int pokemonId, Server.Item.Item item, String arg) {
+        Pokemon p = findOwned(trainerId, pokemonId);
+        if (p == null) return "!Pokemon not found";
+        String n = item.getName();
+        int max = maxHpOf(p);
+        int heal = switch (n) {
+            case "Potion" -> 20; case "Super Potion" -> 35; case "Hyper Potion" -> 70; case "Energy Powder" -> 25;
+            case "Max Potion", "Full Restore" -> max;
+            default -> 0;
+        };
+        if (heal > 0) {
+            if (p.getHp() <= 0) return "!Fainted: needs a Revive";
+            if (p.getHp() >= max) return "!HP is already full";
+            float before = p.getHp();
+            p.setHp(Math.min(max, before + heal));
+            repository.updatePokemon(p);
+            return "+" + Math.round(p.getHp() - before) + " HP";
+        }
+        if (n.equals("Revive") || n.equals("Max Revive")) {
+            if (p.getHp() > 0) return "!Not fainted";
+            p.setHp(n.equals("Revive") ? Math.max(1, max / 2) : max);
+            repository.updatePokemon(p);
+            return "HP " + Math.round(p.getHp());
+        }
+        int v = java.util.Arrays.asList(VITAMINS).indexOf(n);
+        if (v >= 0) {
+            int[] have = vitaminsOf(p);
+            if (java.util.Arrays.stream(have).sum() >= VITAMIN_MAX) return "!Already took " + VITAMIN_MAX + " vitamins";
+            if (have[v] == 0 && repository.findPokemonVitamin(pokemonId, item.getId()) == null) repository.createPokemonVitamin(new PokemonVitamin(pokemonId, item.getId(), 1));
+            else repository.updatePokemonVitamin(new PokemonVitamin(pokemonId, item.getId(), have[v] + 1), pokemonId, item.getId());
+            if (v == 0 && p.getHp() > 0) { p.setHp(p.getHp() + 3); repository.updatePokemon(p); }   // max HP grows by 3
+            return "+1 " + STATS[v];
+        }
+        if (n.equals("Rare Candy")) {
+            if (p.getLevel() >= 100) return "!Already level 100";
+            int[] r = addXp(pokemonId, XP_TABLE[p.getLevel() + 1] - xpOf(p));
+            return r == null ? "!Pokemon not found" : "Level " + r[1];
+        }
+        if ("Stone".equals(item.getCategory()) && !n.equals("Everstone")) {
+            loadEvolutionInfo();
+            String key = n.replace(" ", "").toLowerCase();
+            List<String[]> match = new java.util.ArrayList<>();
+            for (String[] r : evolvesTo.getOrDefault(p.getSpeciesId(), List.of())) if (r[1].replace(" ", "").toLowerCase().contains(key)) match.add(r);
+            if (match.isEmpty()) return "!Nothing happens";
+            String[] pick = null;
+            for (String[] r : match) if (r[0].equals(arg) || (match.size() == 1 && (arg == null || arg.isEmpty()))) pick = r;
+            if (pick == null) return "!Choose what to evolve into";
+            java.util.regex.Matcher m = MIN_LEVEL.matcher(pick[1]);
+            if (m.find() && p.getLevel() < Integer.parseInt(m.group(1))) return "!Level " + m.group(1) + " needed";
+            String problem = evolve(null, pokemonId, pick[0]);
+            return problem != null ? "!" + problem : "Evolved into " + pick[0];
+        }
+        return "!This item can't be used on a Pokemon";
+    }
+
+    // Puts an item in the Pokemon's hand (0 = takes it off). Returns the item it was holding before (0 = none), or -1 when not his.
+    public synchronized int swapHeld(int trainerId, int pokemonId, int itemId) {
+        Pokemon p = findOwned(trainerId, pokemonId);
+        if (p == null) return -1;
+        int old = p.getHeldItemId();
+        p.setHeldItemId(itemId);
+        repository.updatePokemon(p);
+        return old;
+    }
+
+    private String heldJson(Pokemon p) {
+        Server.Item.Item it = p.getHeldItemId() > 0 ? repository.findItemById(p.getHeldItemId()) : null;
+        if (it == null) return "null";
+        String eff = it.getEffect() == null ? "" : it.getEffect();
+        return "{\"id\":" + it.getId() + ",\"name\":\"" + it.getName().replace("\"", "") + "\",\"icon\":\"" + (eff.startsWith("icon:") ? eff.substring(5).replace("\"", "") : "") + "\",\"info\":\"" + it.getDescription().replace("\\", "").replace("\"", "") + "\"}";
     }
 
     //============EVOLUTION INFO=============
@@ -862,7 +967,7 @@ public class PokemonServices {
             + ",\"formId\":" + pokemon.getFormId() + ",\"natureId\":" + pokemon.getNatureId() + ",\"abilityId\":" + pokemon.getAbilityId()
             + ",\"party\":" + pokemon.getPartySlot()
             + ",\"box\":" + pokemon.getPcBoxId()
-            + ",\"slot\":" + pokemon.getPcSlot() + statusJson(pokemon) + "}";
+            + ",\"slot\":" + pokemon.getPcSlot() + ",\"held\":" + heldJson(pokemon) + statusJson(pokemon) + "}";
     }
 
     public List<Pokemon> pokemonOf(int trainerId) {

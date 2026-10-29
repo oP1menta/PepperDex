@@ -837,6 +837,46 @@ public class WebServer {
             reply(exchange, 200, "application/json", "{\"qty\":" + qty + "}");
         });
 
+        // Player: use one item of my bag on one of my Pokemon (potions, vitamins, stones...)
+        httpServer.createContext("/api/item/use", exchange -> {
+            Map<String, String> form = readForm(exchange);
+            SessionParticipant me = sessionPlayerOrNull(form);
+            if (me == null) { reply(exchange, 403, "application/json", error("removed")); return; }
+            int trainerId = intOr(form.get("trainerId"), -1), itemId = intOr(form.get("itemId"), -1), pokemonId = intOr(form.get("pokemonId"), -1);
+            if (!ownsTrainer(me, trainerId)) { reply(exchange, 404, "application/json", error("Not your character")); return; }
+            dexOwn(pokemonId);
+            String r = captureServices.useItem(trainerId, pokemonId, itemId, form.getOrDefault("arg", ""));
+            if (r.startsWith("!")) { reply(exchange, 400, "application/json", error(r.substring(1))); return; }
+            dexOwn(pokemonId);
+            reply(exchange, 200, "application/json", "{\"msg\":\"" + escape(r) + "\"}");
+        });
+
+        // Player: give one of my Pokemon an item to hold (itemId 0 = take it off)
+        httpServer.createContext("/api/item/hold", exchange -> {
+            Map<String, String> form = readForm(exchange);
+            SessionParticipant me = sessionPlayerOrNull(form);
+            if (me == null) { reply(exchange, 403, "application/json", error("removed")); return; }
+            int trainerId = intOr(form.get("trainerId"), -1);
+            if (!ownsTrainer(me, trainerId)) { reply(exchange, 404, "application/json", error("Not your character")); return; }
+            String r = captureServices.holdItem(trainerId, intOr(form.get("pokemonId"), -1), intOr(form.get("itemId"), -1));
+            if (r.startsWith("!")) { reply(exchange, 400, "application/json", error(r.substring(1))); return; }
+            reply(exchange, 200, "application/json", "{}");
+        });
+
+        // Player: throw some of an item of my bag onto the shared table
+        httpServer.createContext("/api/table/toss", exchange -> {
+            Map<String, String> form = readForm(exchange);
+            SessionParticipant me = sessionPlayerOrNull(form);
+            if (me == null) { reply(exchange, 403, "application/json", error("removed")); return; }
+            int trainerId = intOr(form.get("trainerId"), -1), itemId = intOr(form.get("itemId"), -1), qty = intOr(form.get("qty"), 0);
+            if (!ownsTrainer(me, trainerId)) { reply(exchange, 404, "application/json", error("Not your character")); return; }
+            Server.Item.Item item = sessionServices.getRepository().findItemById(itemId);
+            if (item == null || qty < 1 || !captureServices.removeItems(trainerId, itemId, qty)) { reply(exchange, 409, "application/json", error("Not enough")); return; }
+            double a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * 0.4;
+            table.toss(form.getOrDefault("code", "").trim().toUpperCase(), itemId, item.getName(), captureServices.ballSkin(item), captureServices.itemIcon(item), qty, Math.cos(a) * r, Math.sin(a) * r);
+            reply(exchange, 200, "application/json", "{}");
+        });
+
         // Master-only: sweep the table
         httpServer.createContext("/api/table/clear", exchange -> {
             if (!isLocal(exchange)) { reply(exchange, 403, "application/json", error("Master only")); return; }
@@ -1284,7 +1324,13 @@ public class WebServer {
     private static int intOr(String v, int def) { try { return Integer.parseInt(v.trim()); } catch (Exception e) { return def; } }
 
     // stats = hp,atk,def,spatk,spdef,spd (comma separated); hp = current HP. Either may be missing.
+    private boolean ownsTrainer(SessionParticipant me, int trainerId) {
+        for (Trainer t : sessionServices.trainersOf(me.getPlayerId())) if (t.getId() == trainerId) return true;
+        return false;
+    }
+
     private void applyProfile(int trainerId, Map<String, String> form) {
+        if (form.get("bio") != null) profiles.setBio(trainerId, form.get("bio"));
         int[] stats = null;
         if (form.get("stats") != null) {
             String[] parts = form.get("stats").split(",");

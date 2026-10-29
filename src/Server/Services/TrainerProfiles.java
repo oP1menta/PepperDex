@@ -13,7 +13,27 @@ public class TrainerProfiles {
     private static final java.io.File FILE = new java.io.File("profiles.dat");
     private final Map<Integer, int[]> byTrainer = new HashMap<>();
 
-    public TrainerProfiles() { load(); }
+    // The character's description, a separate file (bios.dat) so profiles.dat keeps loading
+    private static final java.io.File BIO_FILE = new java.io.File("bios.dat");
+    public static final int BIO_MAX = 600;
+    private final Map<Integer, String> bios = new HashMap<>();
+
+    public TrainerProfiles() { load(); loadBios(); }
+
+    @SuppressWarnings("unchecked")
+    private void loadBios() {
+        if (!BIO_FILE.exists()) return;
+        try (var in = new java.io.ObjectInputStream(new java.io.FileInputStream(BIO_FILE))) {
+            bios.putAll((Map<Integer, String>) in.readObject());
+        } catch (Exception e) { System.err.println("bios.dat ignored: " + e); }
+    }
+
+    public synchronized void setBio(int id, String text) {
+        String t = text == null ? "" : text.trim();
+        bios.put(id, t.length() > BIO_MAX ? t.substring(0, BIO_MAX) : t);
+        try (var out = new java.io.ObjectOutputStream(new java.io.FileOutputStream(BIO_FILE))) { out.writeObject(bios); }
+        catch (java.io.IOException e) { System.err.println("could not save bios.dat: " + e); }
+    }
 
     @SuppressWarnings("unchecked")
     private void load() {
@@ -43,7 +63,8 @@ public class TrainerProfiles {
         for (int k = STATS; k < N; k++) spent += v[k] - 10;
         return "{\"level\":" + v[LEVEL] + ",\"xp\":" + v[XP] + ",\"xpNext\":" + XP_PER_LEVEL + ",\"hp\":" + cur + ",\"maxHp\":" + max +
             ",\"stats\":[" + v[3] + "," + v[4] + "," + v[5] + "," + v[6] + "," + v[7] + "," + v[8] + "]" +
-            ",\"free\":" + (10 + v[LEVEL] - 1 - spent) + "}";
+            ",\"free\":" + (10 + v[LEVEL] - 1 - spent) +
+            ",\"bio\":\"" + bios.getOrDefault(id, "").replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "").replace("\n", "\\n").replace("\t", " ") + "\"}";
     }
 
     // stats = 6 numbers or null; cur = current HP or null. A player may change these on his own sheet.

@@ -1021,3 +1021,20 @@ h4.sub { margin: 14px 0 2px; font-size: .85rem; color: var(--label); text-transf
 .mapvars button.mapvar canvas { display: block; border-radius: 4px; }
 .mapvars button.mapvar span { font-size: 11px; }
 .sw-tree { background: radial-gradient(circle at 50% 40%, #3e9a43 55%, #6b4a2a 56%); }
+
+/* marco99: profile + item sheet */
+.profbtn { margin: 0 6px 0 0; padding: 2px 8px; font-size: 1rem; background: #0003; color: #fff; border: 1px solid #fff5; border-radius: 4px; }
+.ovl { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 12px; background: #000a; }
+.ovl.top { z-index: 9100; }
+.profname { margin: 6px 0; }
+#profBio { width: 100%; box-sizing: border-box; font: inherit; padding: 8px; border: 2px solid var(--line); border-radius: 6px; resize: vertical; }
+.profbag { grid-template-columns: repeat(3, 1fr); }
+.itico { display: block; line-height: 1; }
+.itinfo { margin: 6px 0 10px; }
+.itbtns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+.itbtns input { width: 4.5em; }
+.itpick { display: grid; gap: 6px; margin-top: 6px; }
+.itpick button { display: flex; align-items: center; gap: 8px; text-align: left; margin: 0; }
+.itpick small { opacity: .8; }
+.itback { margin: 4px 0 8px; }
+.itmsg { margin: 10px 0 0; font-weight: bold; }

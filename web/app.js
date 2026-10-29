@@ -1114,7 +1114,7 @@ function renderBag() {
   if (!document.getElementById('bagList')) return;
   bagList.innerHTML = pcData.length
     ? pcData.map(tr => {
-        const cells = tr.items.map(i => '<div class="slot" title="' + esc(i.name) + '">' + ballImg(i.skin || i.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), 52) + '<span class="nm">' + esc(i.name) + '</span><b class="qty">x' + i.qty + '</b></div>');
+        const cells = tr.items.map(i => itemSlot(tr.id, i));
         while (cells.length < 12 || cells.length % 6) cells.push('<div class="slot empty"></div>');
         return '<div class="bagpanel"><h3>' + esc(tr.name) + '</h3><div class="bag-grid">' + cells.join('') + '</div></div>';
       }).join('')
@@ -1557,6 +1557,8 @@ function drawStatus() {
         '<table class="st-table"><thead><tr><th></th><td>' + t('stBase') + '</td><td>' + t('stNat') + '</td><td>' + t('stSpent') + '</td><td>' + t('stTotal') + '</td><td></td></tr></thead><tbody>' + rows + '</tbody></table>' +
         (spent ? '<div class="st-apply"><button onclick="stClear()">' + t('stClear') + '</button><button class="go" onclick="stApply()">' + t('stApply') + ' (' + spent + ')</button></div>' : '') + '</div>' +
       (p.caps && p.caps.length ? '<div class="st-block"><div class="st-line"><b>' + t('caps') + '</b></div><div class="caps">' + p.caps.map(c => '<span class="chip ccap">' + esc(c[0]) + (c[1] ? ' ' + esc(c[1]) : '') + '</span>').join('') + '</div></div>' : '') +
+      (!IS_MASTER ? '<div class="st-block"><div class="st-line"><b>' + t('itHeld') + '</b><span>' + (p.held ? esc(p.held.icon) + ' ' + esc(p.held.name) : '&ndash;') + '</span></div>' +
+        (p.held ? '<small>' + esc(p.held.info) + '</small> <button onclick="heldTake(' + p.id + ')">' + t('itTake') + '</button>' : '') + '</div>' : '') +
       '<div class="st-block st-ask"><button onclick="stAsk()"' + (stAsked.has(p.id) ? ' disabled' : '') + '>' + (stAsked.has(p.id) ? t('reqSent') : t('reqBtn')) + '</button><small>' + t('reqHint') + '</small></div>')) + '</div>' +
     '</div></div>';
   o.firstElementChild.scrollTop = keepScroll;

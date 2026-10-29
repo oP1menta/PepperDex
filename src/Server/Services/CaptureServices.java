@@ -225,6 +225,29 @@ public class CaptureServices {
         return true;
     }
 
+    // Uses one item from the bag on a Pokemon (PokemonServices.applyItem has the rules). "!reason" = nothing spent.
+    public synchronized String useItem(int trainerId, int pokemonId, int itemId, String arg) {
+        Item item = repository.findItemById(itemId);
+        if (item == null || quantity(trainerId, itemId) < 1) return "!Not in the bag";
+        String r = pokemonServices.applyItem(trainerId, pokemonId, item, arg);
+        if (!r.startsWith("!")) removeItems(trainerId, itemId, 1);
+        return r;
+    }
+
+    // Gives an item to hold (the one it held goes back to the bag); itemId 0 = takes it off. "!reason" = nothing changed.
+    public synchronized String holdItem(int trainerId, int pokemonId, int itemId) {
+        if (itemId != 0) {
+            Item item = repository.findItemById(itemId);
+            if (item == null || quantity(trainerId, itemId) < 1) return "!Not in the bag";
+            if (!("Held".equals(item.getCategory()) || "Berry".equals(item.getCategory()) || "Everstone".equals(item.getName()))) return "!This item can't be held";
+        }
+        int old = pokemonServices.swapHeld(trainerId, pokemonId, itemId);
+        if (old < 0) return "!Pokemon not found";
+        if (itemId != 0) removeItems(trainerId, itemId, 1);
+        if (old > 0) addItem(trainerId, old, 1);
+        return "ok";
+    }
+
     private void useOne(int trainerId, int itemId) {
         TrainerInventory inv = repository.findTrainerInventory(trainerId, itemId);
         if (inv.getQuantity() <= 1) {
@@ -248,7 +271,7 @@ public class CaptureServices {
             json.append("{\"id\":").append(item.getId())
                 .append(",\"name\":\"").append(item.getName().replace("\"", ""))
                 .append("\",\"qty\":").append(inv.getQuantity())
-                .append(",\"skin\":\"").append(ballSkin(item)).append("\",\"icon\":\"").append(itemIcon(item)).append("\",\"cat\":\"").append(item.getCategory()).append("\"}");
+                .append(",\"skin\":\"").append(ballSkin(item)).append("\",\"icon\":\"").append(itemIcon(item)).append("\",\"cat\":\"").append(item.getCategory()).append("\",\"info\":\"").append(item.getDescription().replace("\\", "").replace("\"", "")).append("\"}");
         }
         return json.append("]").toString();
     }
